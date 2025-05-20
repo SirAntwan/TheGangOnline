@@ -12,6 +12,7 @@ export default function App() {
   const [hand, setHand] = useState([]);
   const [chip, setChip] = useState({});
   const [result, setResult] = useState(null);
+  const [playerStates, setPlayerStates] = useState([]);
 
   useEffect(() => {
     socket.on("connect", () => console.log("Connected as", socket.id));
@@ -20,8 +21,9 @@ export default function App() {
     socket.on("player_joined", ({ players }) => setPlayers(players));
     socket.on("game_started", ({ hand, round }) => {
       console.log("game_started received with hand:", hand);
-      setHand(hand);      // ✅ now populated
+      setHand(hand);     
       setRound(round);
+      setResult(null);
     });
     socket.on("round_update", ({ round, communityCards }) => {
       setRound(round);
@@ -34,6 +36,9 @@ export default function App() {
     socket.on("showdown_result", ({ result, outcome }) => {
       setResult({ result, outcome });
     });
+    socket.on("player_chip_update", ({ players }) => {
+      setPlayerStates(players);
+    })
   }, []);
 
   const createGame = () => {
@@ -64,74 +69,88 @@ export default function App() {
     socket.emit("showdown", { gameId });
   };
 
+
   return (
-    <div className="p-6 space-y-4 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold">The Gang - Online</h1>
-      <div>
-        <input
-          placeholder="Your Name"
-          value={playerName}
-          onChange={e => setPlayerName(e.target.value)}
-          className="border p-2 mr-2"
-        />
-        <input
-          placeholder="Game ID"
-          value={gameId}
-          onChange={e => setGameId(e.target.value)}
-          className="border p-2 mr-2"
-        />
-        <button onClick={joinGame} className="bg-blue-500 text-white px-4 py-2 rounded">
-          Join Game
-        </button>
-        <button onClick={createGame} className="bg-green-500 text-white px-4 py-2 rounded ml-2">
-          Create Game
-        </button>
+    <div className="container">
+      {/* Left Panel: Game UI */}
+      <div className="left-panel">
+        <h1>The Gang - Online</h1>
+
+        <div>
+          <input
+            placeholder="Your Name"
+            value={playerName}
+            onChange={e => setPlayerName(e.target.value)}
+          />
+          <input
+            placeholder="Game ID"
+            value={gameId}
+            onChange={e => setGameId(e.target.value)}
+          />
+          <button onClick={joinGame}>Join Game</button>
+          <button onClick={createGame}>Create Game</button>
+        </div>
+
+        <div>
+          <button onClick={startGame}>Start Game</button>
+          <button onClick={nextRound}>Next Round</button>
+          <button onClick={showdown}>Showdown</button>
+        </div>
+
+        <div>
+          <h2>Round {round}</h2>
+          <p>Community Cards: {communityCards.map(c => `${c.value}${c.suit}`).join(" ")}</p>
+          <p>Your Hand: {hand.map(c => `${c.value}${c.suit}`).join(" ")}</p>
+        </div>
+
+        <div>
+          <h2>Pick a Chip</h2>
+          {Array.from({ length: players.length }, (_, i) => i + 1).map(n => (
+            <button key={n} onClick={() => pickChip(`round${round}`, n)}>
+              {n}★
+            </button>
+          ))}
+        </div>
+
+        {result && (
+          <div className="result-box">
+            <h3>Showdown Result</h3>
+            <ul className="no-bullets">
+              {result.result.map(r => (
+                <li key={r.playerId}>
+                  {r.playerId === socket.id ? "You" : r.name}: {r.description}
+                </li>
+              ))}
+            </ul>
+            <p>Outcome: {result.outcome.toUpperCase()}</p>
+          </div>
+        )}
       </div>
 
-      <div>
-        <button onClick={startGame} className="bg-purple-500 text-white px-4 py-2 rounded">
-          Start Game
-        </button>
-        <button onClick={nextRound} className="bg-yellow-500 text-white px-4 py-2 rounded ml-2">
-          Next Round
-        </button>
-        <button onClick={showdown} className="bg-red-500 text-white px-4 py-2 rounded ml-2">
-          Showdown
-        </button>
-      </div>
-
-      <div>
-        <h2 className="text-xl font-semibold">Round {round}</h2>
-        <p>Community Cards: {communityCards.map(c => `${c.value}${c.suit}`).join(" ")}</p>
-        <p>Your Hand: {hand.map(c => `${c.value}${c.suit}`).join(" ")}</p>
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold">Pick a Chip</h2>
-        {[1, 2, 3, 4, 5, 6].map(n => (
-          <button
-            key={n}
-            onClick={() => pickChip(`round${round}`, n)}
-            className="border px-3 py-1 m-1"
-          >
-            {n}★
-          </button>
+      {/* Right Panel: Player List */}
+      <div className="right-panel">
+        <h2>Player List</h2>
+        {playerStates.map(p => (
+          <div key={p.id} className="player-box">
+            <h3>{p.name}</h3>
+            <ul className="no-bullets">
+              {Object.entries(p.chips).map(([roundKey, value]) => {
+                const roundLabels = ["Pre-flop", "Flop", "Turn", "River"];
+                const index = parseInt(roundKey.slice(5));
+                return (
+                  <li key={roundKey}>
+                    <strong>{roundLabels[index] || `Round ${index}`}:</strong> {value}★
+                  </li>
+                );
+              })}
+              {Object.keys(p.chips).length === 0 && (
+                <li className="italic">No chips selected yet</li>
+              )}
+            </ul>
+          </div>
         ))}
       </div>
-
-      {result && (
-        <div className="bg-gray-100 p-4 rounded">
-          <h3 className="text-xl font-bold">Showdown Result</h3>
-          <ul>
-            {result.result.map(r => (
-              <li key={r.playerId}>
-                {r.playerId === socket.id ? "You" : r.playerId.slice(0, 5)}: {r.description}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2">Outcome: {result.outcome.toUpperCase()}</p>
-        </div>
-      )}
     </div>
   );
+
 }

@@ -72,37 +72,65 @@ io.on("connection", socket => {
     if (!game || game.players.length < 2) return;
 
     game.deck = shuffleDeck();
+
     game.players.forEach(player => {
       player.hand = dealCards(game.deck, 2);
-      player.chips = {};
+      player.chips = {}; // ✅ Reset chips
     });
-    game.communityCards = [];
-    game.round = 0;
+
+    game.communityCards = [];   // ✅ Clear board
+    game.round = 0;             // ✅ Reset round
     game.status = "in-progress";
 
-    console.log("=== Starting Game ===");
+    console.log("=== Starting New Game ===");
+
     game.players.forEach(player => {
       const recipientSocket = io.sockets.sockets.get(player.id);
       if (!recipientSocket) {
         console.log(`⚠ No active socket for ${player.name} (${player.id})`);
       } else {
-        console.log(`Sending hand to ${player.name} (${player.id})`);
-        console.log(`Sending (${player.name}) `, player.hand);
         recipientSocket.emit("game_started", {
           hand: player.hand,
           round: game.round
         });
       }
     });
+
+    // 🔄 Sync fresh player state (cleared chips)
+    io.to(gameId).emit("player_chip_update", {
+      players: game.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        chips: {}
+      }))
+    });
+
+    // Optionally, send cleared community cards
+    io.to(gameId).emit("round_update", {
+      round: game.round,
+      communityCards: []
+    });
   });
+
 
   socket.on("pick_chip", ({ gameId, color, value }) => {
     const game = games[gameId];
     const player = game.players.find(p => p.id === socket.id);
     if (!player) return;
+
+    // Ensure chip is updated for this round
     player.chips[color] = value;
-    io.to(gameId).emit("chip_update", { playerId: player.id, color, value });
+
+    // Emit fresh player state after each chip pick
+    io.to(gameId).emit("player_chip_update", {
+      players: game.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        chips: { ...p.chips } // clone to avoid mutation issues
+      }))
+    });
   });
+
 
   socket.on("next_round", ({ gameId }) => {
     const game = games[gameId];
@@ -125,17 +153,23 @@ io.on("connection", socket => {
 
   socket.on("showdown", ({ gameId }) => {
     const game = games[gameId];
-    const result = evaluateHands(game.players, game.communityCards);
-    // Validate chip order with ranking
-    const isCorrect = result.every((r, i, arr) => !i || r.rank >= arr[i - 1].rank);
-    if (isCorrect) {
-      game.vaults++;
-    } else {
-      game.alarms++;
-    }
-    const outcome = game.vaults >= 3 ? "win" : game.alarms >= 3 ? "lose" : "continue";
+    const result = evaluateHands(game.players, game.communityCards); // sorted best to worst
+
+    // Reverse the result so worst hand is first, gets chip 1
+    const ranked = [...result].reverse();
+
+    const allCorrect = ranked.every((res, i) => {
+      const expectedChip = i + 1; // 1 (worst) to N (best)
+      const player = game.players.find(p => p.id === res.playerId);
+      const chip = player?.chips[`round${game.round}`];
+      return chip === expectedChip;
+    });
+
+    const outcome = allCorrect ? "WINNER" : "LOSER";
+
     io.to(gameId).emit("showdown_result", { result, outcome });
   });
+
 
   socket.on("disconnect", () => {
     console.log(`Socket disconnected: ${socket.id}`);

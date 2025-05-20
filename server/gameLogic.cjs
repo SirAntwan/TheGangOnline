@@ -90,6 +90,7 @@ function shuffleDeck() {
       const value = getHandValue(allCards);
       return {
         playerId: player.id,
+        name: player.name,
         hand: player.hand,
         rank: value.rank,
         description: value.description
