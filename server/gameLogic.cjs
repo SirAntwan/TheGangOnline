@@ -43,27 +43,77 @@ function shuffleDeck() {
       const lowAceStraight = sortedVals.includes(14) && [2, 3, 4, 5].every(n => sortedVals.includes(n));
   
       if (isFlush && isStraight && sortedVals[0] === 14) {
-        best = { rank: 10, description: "Royal Flush" };
+        best = { rank: 10, description: "Royal Flush", tiebreakers: [14] };
       } else if (isFlush && (isStraight || lowAceStraight)) {
-        best = best.rank < 9 ? { rank: 9, description: "Straight Flush" } : best;
+        best = best.rank < 9 ? {
+          rank: 9,
+          description: "Straight Flush",
+          tiebreakers: sortedVals
+        } : best;
       } else if (countVals[0] === 4) {
-        best = best.rank < 8 ? { rank: 8, description: "Four of a Kind" } : best;
+        const quadVal = Object.keys(counts).find(v => counts[v] === 4);
+        const kicker = Object.keys(counts).find(v => counts[v] === 1);
+        best = best.rank < 8 ? {
+          rank: 8,
+          description: "Four of a Kind",
+          tiebreakers: [cardValue(quadVal), cardValue(kicker)]
+        } : best;
       } else if (countVals[0] === 3 && countVals[1] === 2) {
-        best = best.rank < 7 ? { rank: 7, description: "Full House" } : best;
+        const trips = Object.keys(counts).find(v => counts[v] === 3);
+        const pair = Object.keys(counts).find(v => counts[v] === 2);
+        best = best.rank < 7 ? {
+          rank: 7,
+          description: "Full House",
+          tiebreakers: [cardValue(trips), cardValue(pair)]
+        } : best;
       } else if (isFlush) {
-        best = best.rank < 6 ? { rank: 6, description: "Flush" } : best;
+        best = best.rank < 6 ? {
+          rank: 6,
+          description: "Flush",
+          tiebreakers: sortedVals
+        } : best;
       } else if (isStraight || lowAceStraight) {
-        best = best.rank < 5 ? { rank: 5, description: "Straight" } : best;
+        best = best.rank < 5 ? {
+          rank: 5,
+          description: "Straight",
+          tiebreakers: sortedVals
+        } : best;
       } else if (countVals[0] === 3) {
-        best = best.rank < 4 ? { rank: 4, description: "Three of a Kind" } : best;
+        const trips = Object.keys(counts).find(v => counts[v] === 3);
+        const kickers = Object.keys(counts).filter(v => counts[v] === 1)
+          .map(cardValue).sort((a, b) => b - a);
+        best = best.rank < 4 ? {
+          rank: 4,
+          description: "Three of a Kind",
+          tiebreakers: [cardValue(trips), ...kickers]
+        } : best;
       } else if (countVals[0] === 2 && countVals[1] === 2) {
-        best = best.rank < 3 ? { rank: 3, description: "Two Pair" } : best;
+        const pairs = Object.keys(counts).filter(v => counts[v] === 2)
+          .map(cardValue).sort((a, b) => b - a);
+        const kicker = Object.keys(counts).find(v => counts[v] === 1);
+        best = best.rank < 3 ? {
+          rank: 3,
+          description: "Two Pair",
+          tiebreakers: [...pairs, cardValue(kicker)]
+        } : best;
       } else if (countVals[0] === 2) {
-        best = best.rank < 2 ? { rank: 2, description: "Pair" } : best;
+        const pair = Object.keys(counts).find(v => counts[v] === 2);
+        const kickers = Object.keys(counts).filter(v => counts[v] === 1)
+          .map(cardValue).sort((a, b) => b - a);
+        best = best.rank < 2 ? {
+          rank: 2,
+          description: "Pair",
+          tiebreakers: [cardValue(pair), ...kickers]
+        } : best;
       } else {
-        const highCard = Math.max(...combo.map(c => cardValue(c.value)));
-        if (best.rank < 1) best = { rank: 1, description: `High Card: ${highCard}` };
+        const sortedHighCards = combo.map(c => cardValue(c.value)).sort((a, b) => b - a);
+        if (best.rank < 1) best = {
+          rank: 1,
+          description: "High Card",
+          tiebreakers: sortedHighCards
+        };
       }
+
     }
   
     return best;
