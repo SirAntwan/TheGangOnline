@@ -118,7 +118,7 @@ export default function App() {
             <ul className="no-bullets">
               {result.result.map(r => (
                 <li key={r.playerId}>
-                  {r.playerId === socket.id ? "You" : r.name}: {r.description}
+                  {r.playerId === socket.id ? "You" : r.name}: {r.description} {r.hand}
                 </li>
               ))}
             </ul>
