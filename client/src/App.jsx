@@ -98,7 +98,7 @@ export default function App() {
         </div>
 
         <div>
-          <h2>Round {round}</h2>
+          <h2>{["Pre-flop", "Flop", "Turn", "River"][round] || `Round ${round}`}</h2>
           <p>Community Cards: {communityCards.map(c => `${c.value}${c.suit}`).join(" ")}</p>
           <p>Your Hand: {hand.map(c => `${c.value}${c.suit}`).join(" ")}</p>
         </div>
