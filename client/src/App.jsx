@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:3000"); // replace with your deployed server URL when needed
+const socket = io("https://thegangonline.onrender.com"); // replace with your deployed server URL when needed
 
 export default function App() {
   const [gameId, setGameId] = useState("");
