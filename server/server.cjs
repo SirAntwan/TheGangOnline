@@ -153,22 +153,56 @@ io.on("connection", socket => {
 
   socket.on("showdown", ({ gameId }) => {
     const game = games[gameId];
-    const result = evaluateHands(game.players, game.communityCards); // sorted best to worst
+    const result = evaluateHands(game.players, game.communityCards);
 
-    // Reverse the result so worst hand is first, gets chip 1
-    const ranked = [...result].reverse();
+    // Step 1: Group players by identical hand strength
+    const groups = [];
+    let i = 0;
+    while (i < result.length) {
+      const current = result[i];
+      const tiedGroup = [current];
 
-    const allCorrect = ranked.every((res, i) => {
-      const expectedChip = i + 1; // 1 (worst) to N (best)
-      const player = game.players.find(p => p.id === res.playerId);
-      const chip = player?.chips[`round${game.round}`];
-      return chip === expectedChip;
+      while (
+        i + 1 < result.length &&
+        result[i + 1].rank === current.rank &&
+        JSON.stringify(result[i + 1].tiebreakers) === JSON.stringify(current.tiebreakers)
+      ) {
+        tiedGroup.push(result[i + 1]);
+        i++;
+      }
+
+      groups.push(tiedGroup);
+      i++;
+    }
+
+    // Step 2: Assign chip ranges to each group
+    let chipIndex = 1; // start with worst chip
+    const expectedChipsByPlayer = {};
+
+    for (const group of [...groups].reverse()) {
+      const validChips = [];
+      for (let offset = 0; offset < group.length; offset++) {
+        validChips.push(chipIndex + offset);
+      }
+
+      group.forEach(player => {
+        expectedChipsByPlayer[player.playerId] = validChips;
+      });
+
+      chipIndex += group.length;
+    }
+
+    // Step 3: Check if each player's chip matches their allowed range
+    const allCorrect = game.players.every(p => {
+      const selectedChip = p.chips[`round${game.round}`];
+      const expected = expectedChipsByPlayer[p.id];
+      return expected.includes(selectedChip);
     });
 
     const outcome = allCorrect ? "WINNER" : "LOSER";
-
     io.to(gameId).emit("showdown_result", { result, outcome });
   });
+
 
 
   socket.on("disconnect", () => {

@@ -143,9 +143,17 @@ function shuffleDeck() {
         name: player.name,
         hand: player.hand,
         rank: value.rank,
-        description: value.description
+        description: value.description,
+        tiebreakers: value.tiebreakers || []
       };
-    }).sort((a, b) => b.rank - a.rank);
+    }).sort((a, b) => {
+      if (b.rank !== a.rank) return b.rank - a.rank;
+      for (let i = 0; i < Math.max(a.tiebreakers.length, b.tiebreakers.length); i++) {
+        const diff = (b.tiebreakers[i] || 0) - (a.tiebreakers[i] || 0);
+        if (diff !== 0) return diff;
+      }
+      return 0;
+    });
   }
   
   module.exports = {
