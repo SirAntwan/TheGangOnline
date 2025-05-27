@@ -44,7 +44,7 @@ export default function App() {
   const createGame = () => {
     const newGameId = Math.random().toString(36).substring(2, 7);
     setGameId(newGameId);
-    socket.emit("create_game", { gameId: newGameId });
+    socket.emit("create_game", { gameId: newGameId, playerName });
   };
 
   const joinGame = () => {

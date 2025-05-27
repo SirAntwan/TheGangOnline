@@ -36,12 +36,28 @@ function dealCards(deck, count) {
 io.on("connection", socket => {
   console.log("Socket connected:", socket.id);
 
-  socket.on("create_game", ({ gameId }) => {
+  socket.on("create_game", ({ gameId, playerName }) => {
     if (!games[gameId]) {
       games[gameId] = createGame(gameId);
     }
+
+    const game = games[gameId];
+    console.log(`Game Created by ${playerName} attempting to join game ${gameId}`);
+    // Prevent duplicate joins
+    const alreadyJoined = game.players.find(p => p.id === socket.id);
+    if (!alreadyJoined) {
+      const player = {
+        id: socket.id,
+        name: playerName,
+        hand: [],
+        chips: {},
+      };
+      game.players.push(player);
+    }
+
     socket.join(gameId);
     socket.emit("game_created", { gameId });
+    io.to(gameId).emit("player_joined", { players: game.players });
   });
 
   socket.on("join_game", ({ gameId, playerName }) => {
