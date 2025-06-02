@@ -26,6 +26,7 @@ function getCardImageFilename(card) {
 
 export default function App() {
   const [gameId, setGameId] = useState("");
+  const [showModal, setShowModal] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [players, setPlayers] = useState([]);
   const [round, setRound] = useState(0);
@@ -36,7 +37,10 @@ export default function App() {
   const [playerStates, setPlayerStates] = useState([]);
 
   useEffect(() => {
-    socket.on("connect", () => console.log("Connected as", socket.id));
+    socket.on("connect", () => {
+      console.log("Connected as", socket.id);
+      setMySocketId(socket.id); 
+    });
 
     socket.on("game_created", ({ gameId }) => alert(`Game ${gameId} created!`));
     socket.on("player_joined", ({ players }) => setPlayers(players));
@@ -88,6 +92,7 @@ export default function App() {
 
   const showdown = () => {
     socket.emit("showdown", { gameId });
+    setShowModal(true);
   };
 
 
@@ -155,19 +160,85 @@ export default function App() {
         </div>
 
         {result && (
-          <div className="result-box">
-            <h3>Showdown Result</h3>
-            <ul className="no-bullets">
-              {result.result.map(r => (
-                <li key={r.playerId}>
-                  {r.playerId === socket.id ? "You" : r.name}: {r.description} – 
-                  Hand: {r.hand.map(c => `${c.value}${c.suit}`).join(" ")}
-                </li>
-              ))}
-            </ul>
-            <p>Outcome: {result.outcome.toUpperCase()}</p>
+          <div
+            className="modal fade show d-block"
+            tabIndex="-1"
+            role="dialog"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          >
+            <div className="modal-dialog modal-lg" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Showdown Result</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setResult(null)}
+                  ></button>
+                </div>
+
+                <div className="modal-body">
+                  {/* Community Cards */}
+                  <div className="mb-4">
+                    <h6>Community Cards</h6>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                      }}
+                    >
+                      {communityCards.map((card, index) => (
+                        <img
+                          key={index}
+                          src={getCardImageFilename(card)}
+                          alt={`${card.value} of ${card.suit}`}
+                          style={{ width: "90px" }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Player Hands */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: "24px",
+                      marginTop: "1rem",
+                    }}
+                  >
+                    {result.result.map((r, index) => (
+                      <div key={r.playerId}>
+                        <strong>#{index + 1} – {r.playerId === socket.id ? "You" : r.name}:</strong> {r.description}
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                          {r.hand.map((card, i) => (
+                            <img
+                              key={i}
+                              src={getCardImageFilename(card)}
+                              alt={`${card.value} of ${card.suit}`}
+                              style={{ width: "90px" }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+
+
+                  <p>
+                    <br></br>
+                    <strong>Outcome:</strong><b>{result.outcome.toUpperCase()}</b>
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
+
+
+
       </div>
 
       {/* Right Panel: Player List */}
