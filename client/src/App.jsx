@@ -209,19 +209,29 @@ export default function App() {
                     }}
                   >
                     {result.result.map((r, index) => (
-                      <div key={r.playerId}>
-                        <strong>#{index + 1} – {r.playerId === socket.id ? "You" : r.name}:</strong> {r.description}
-                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "0.5rem" }}>
-                          {r.hand.map((card, i) => (
-                            <img
-                              key={i}
-                              src={getCardImageFilename(card)}
-                              alt={`${card.value} of ${card.suit}`}
-                              style={{ width: "90px" }}
-                            />
-                          ))}
-                        </div>
-                      </div>
+                      <div
+  key={r.playerId}
+  style={{
+    border: r.playerId === socket.id ? "2px solid #007bff" : "1px solid #ccc",
+    backgroundColor: r.playerId === socket.id ? "#e7f1ff" : "transparent",
+    borderRadius: "8px",
+    padding: "1rem",
+    marginBottom: "1rem"
+  }}
+>
+  <strong>#{index + 1} – {r.playerId === socket.id ? "You" : r.name}:</strong> {r.description}
+  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "0.5rem" }}>
+    {r.hand.map((card, i) => (
+      <img
+        key={i}
+        src={getCardImageFilename(card)}
+        alt={`${card.value} of ${card.suit}`}
+        style={{ width: "90px" }}
+      />
+    ))}
+  </div>
+</div>
+
                     ))}
                   </div>
 
@@ -229,7 +239,7 @@ export default function App() {
 
                   <p>
                     <br></br>
-                    <strong>Outcome:</strong><b>{result.outcome.toUpperCase()}</b>
+                    <strong>Outcome: </strong> <b>{" " + result.outcome.toUpperCase()}</b>
                   </p>
                 </div>
               </div>
