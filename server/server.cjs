@@ -45,7 +45,7 @@ io.on("connection", socket => {
     console.log(`Game Created by ${playerName} attempting to join game ${gameId}`);
     // Prevent duplicate joins
     const alreadyJoined = game.players.find(p => p.id === socket.id);
-    if (!alreadyJoined) {
+    if (!alreadyJoined && playerName != "") {
       const player = {
         id: socket.id,
         name: playerName,

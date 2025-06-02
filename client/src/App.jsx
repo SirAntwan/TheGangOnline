@@ -3,6 +3,27 @@ import { io } from "socket.io-client";
 
 const socket = io("https://thegangonline.onrender.com"); // replace with your deployed server URL when needed
 
+function getCardImageFilename(card) {
+  const suitMap = {
+    "♠": "spades",
+    "♥": "hearts",
+    "♦": "diamonds",
+    "♣": "clubs"
+  };
+
+  const valueMap = {
+    "J": "jack",
+    "Q": "queen",
+    "K": "king",
+    "A": "ace"
+  };
+
+  const value = valueMap[card.value] || card.value.toLowerCase(); // convert 2–10 as-is, face cards get mapped
+  const suit = suitMap[card.suit] || "unknown";
+  return `/cards/${value}_of_${suit}.png`;
+}
+
+
 export default function App() {
   const [gameId, setGameId] = useState("");
   const [playerName, setPlayerName] = useState("");
@@ -99,8 +120,29 @@ export default function App() {
 
         <div>
           <h2>{["Pre-flop", "Flop", "Turn", "River"][round] || `Round ${round}`}</h2>
-          <p>Community Cards: {communityCards.map(c => `${c.value}${c.suit}`).join(" ")}</p>
-          <p>Your Hand: {hand.map(c => `${c.value}${c.suit}`).join(" ")}</p>
+          <p>Community Cards:</p>
+            <div className="card-row">
+              {communityCards.map((card, index) => (
+                <img
+                  key={index}
+                  src={getCardImageFilename(card)}
+                  alt={`${card.value} of ${card.suit}`}
+                  className="card-image"
+                />
+              ))}
+            </div>
+
+            <p>Your Hand:</p>
+            <div className="card-row">
+              {hand.map((card, index) => (
+                <img
+                  key={index}
+                  src={getCardImageFilename(card)}
+                  alt={`${card.value} of ${card.suit}`}
+                  className="card-image"
+                />
+              ))}
+            </div>
         </div>
 
         <div>
